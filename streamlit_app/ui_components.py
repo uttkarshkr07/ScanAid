@@ -275,10 +275,10 @@ def render_image_row(original_pil: Image.Image, face_uint8: np.ndarray | None) -
     col1, col2 = st.columns(2, gap="medium")
 
     with col1:
-        st.image(original_pil, caption="Uploaded image", use_container_width=True)
+        st.image(original_pil, caption="Uploaded image", width="stretch")
 
     with col2:
         if face_uint8 is not None:
-            st.image(face_uint8, caption="Detected face crop (224×224)", use_container_width=True)
+            st.image(face_uint8, caption="Detected face crop (224×224)", width="stretch")
         else:
             st.warning("No face detected — the analysis cannot proceed.")

@@ -15,8 +15,15 @@ import os
 # Two levels up → <project_root>
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-DOWN_SYNDROME_MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "down_syndrome_detector.h5")
-ANGELMAN_MODEL_PATH      = os.path.join(PROJECT_ROOT, "models", "angelman_siamese_model.h5")
+# Use .keras format (Keras 3 native) — version-agnostic, preferred over .h5
+# Fall back to .h5 if .keras file doesn't exist yet
+def _model_path(name):
+    keras_path = os.path.join(PROJECT_ROOT, "models", f"{name}.keras")
+    h5_path    = os.path.join(PROJECT_ROOT, "models", f"{name}.h5")
+    return keras_path if os.path.exists(keras_path) else h5_path
+
+DOWN_SYNDROME_MODEL_PATH = _model_path("down_syndrome_detector")
+ANGELMAN_MODEL_PATH      = _model_path("angelman_siamese_model")
 
 # Primary reference directory (curated reference images for Angelman screening)
 ANGELMAN_REFERENCE_DIR   = os.path.join(PROJECT_ROOT, "data", "references", "angelman")

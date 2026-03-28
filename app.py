@@ -196,7 +196,7 @@ def render_module_page(module: str) -> None:
         if model_ok:
             try:
                 with st.spinner("Loading reference embeddings…"):
-                    ref_embeddings = load_reference_embeddings(base_network)
+                    ref_embeddings = load_reference_embeddings()
                 if ref_embeddings is None:
                     st.warning(
                         "No reference images were found. "
@@ -323,13 +323,13 @@ def render_module_page(module: str) -> None:
 
     with res_col2:
         if overlay is not None:
-            st.image(overlay, caption="Grad-CAM Explainability Heatmap", use_container_width=True)
+            st.image(overlay, caption="Grad-CAM Explainability Heatmap", width="stretch")
             st.caption(
                 "The heatmap highlights facial regions that most influenced the prediction. "
                 "Warmer colours (red/yellow) indicate higher importance."
             )
         else:
-            st.image(face_uint8, caption="Detected Face Crop", use_container_width=True)
+            st.image(face_uint8, caption="Detected Face Crop", width="stretch")
             st.caption("Grad-CAM overlay could not be generated for this image.")
 
     # --- Technical details expander -----------------------------------------

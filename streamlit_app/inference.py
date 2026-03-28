@@ -180,17 +180,16 @@ def load_angelman_model():
 # ---------------------------------------------------------------------------
 
 @st.cache_resource(show_spinner=False)
-def load_reference_embeddings(base_network):
+def load_reference_embeddings():
     """Compute and cache per-class prototype embeddings for Angelman screening.
 
-    Scans ANGELMAN_REFERENCE_DIR for sub-folders (one per class).  Falls back
-    to ANGELMAN_FALLBACK_DIR if the primary directory is absent or empty.
-    Each class prototype is the mean of all per-image embeddings in that folder.
+    Loads the Angelman model internally (already cached) so that a Keras model
+    is never passed as a cache-key argument (which Streamlit cannot hash).
 
-    Parameters
-    ----------
-    base_network : tf.keras.Model
-        The feature-extractor sub-model extracted from the Siamese model.
+    Scans ANGELMAN_REFERENCE_DIR first, then falls back to ANGELMAN_FALLBACK_DIR.
+    Handles two layouts:
+      - images directly in the directory  → all treated as class "angelman"
+      - images inside named subdirectories → subdirectory name = class name
 
     Returns
     -------
@@ -198,48 +197,62 @@ def load_reference_embeddings(base_network):
         Mapping from class name to its prototype embedding vector, or None if
         no usable reference images were found.
     """
-    import tensorflow as tf
     from PIL import Image
 
-    # Decide which directory to use
-    ref_dir = None
-    for candidate in [ANGELMAN_REFERENCE_DIR, ANGELMAN_FALLBACK_DIR]:
-        if os.path.isdir(candidate):
-            sub_dirs = [
-                d for d in os.listdir(candidate)
-                if os.path.isdir(os.path.join(candidate, d))
-            ]
-            if sub_dirs:
-                ref_dir = candidate
-                break
-
-    if ref_dir is None:
+    angelman_model = load_angelman_model()
+    base_network   = _extract_base_network(angelman_model)
+    if base_network is None:
         return None
 
-    prototypes = {}
-    valid_exts  = {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}
+    valid_exts = {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}
 
-    for class_name in sorted(os.listdir(ref_dir)):
-        class_path = os.path.join(ref_dir, class_name)
-        if not os.path.isdir(class_path):
-            continue
+    def _images_in_dir(d):
+        return [
+            os.path.join(d, f) for f in os.listdir(d)
+            if os.path.isfile(os.path.join(d, f))
+            and os.path.splitext(f)[1].lower() in valid_exts
+        ]
 
+    def _embed_images(paths):
         embeddings = []
-        for fname in os.listdir(class_path):
-            if os.path.splitext(fname)[1].lower() not in valid_exts:
-                continue
-            fpath = os.path.join(class_path, fname)
+        for fpath in paths:
             try:
                 img = Image.open(fpath).convert("RGB").resize(IMG_SIZE)
                 arr = np.array(img, dtype=np.float32) / 255.0
-                arr = np.expand_dims(arr, axis=0)          # (1, 224, 224, 3)
-                emb = base_network.predict(arr, verbose=0) # (1, embedding_dim)
+                arr = np.expand_dims(arr, axis=0)
+                emb = base_network.predict(arr, verbose=0)
                 embeddings.append(emb[0])
             except Exception:
-                continue  # skip unreadable files silently
+                continue
+        return embeddings
 
-        if embeddings:
-            prototypes[class_name] = np.mean(embeddings, axis=0)
+    prototypes = {}
+
+    for candidate in [ANGELMAN_REFERENCE_DIR, ANGELMAN_FALLBACK_DIR]:
+        if not os.path.isdir(candidate):
+            continue
+
+        # Check for subdirectory layout first
+        sub_dirs = [
+            d for d in os.listdir(candidate)
+            if os.path.isdir(os.path.join(candidate, d))
+        ]
+
+        if sub_dirs:
+            # subdirectory per class
+            for class_name in sorted(sub_dirs):
+                class_path = os.path.join(candidate, class_name)
+                embs = _embed_images(_images_in_dir(class_path))
+                if embs:
+                    prototypes[class_name] = np.mean(embs, axis=0)
+        else:
+            # flat layout — all images belong to "angelman" class
+            embs = _embed_images(_images_in_dir(candidate))
+            if embs:
+                prototypes["angelman"] = np.mean(embs, axis=0)
+
+        if prototypes:
+            break  # found usable references, stop searching
 
     return prototypes if prototypes else None
 
