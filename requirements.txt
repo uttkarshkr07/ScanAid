@@ -1,0 +1,7 @@
+streamlit>=1.28.0
+tensorflow>=2.12.0
+opencv-python-headless
+numpy
+Pillow
+matplotlib
+scikit-learn

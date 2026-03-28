@@ -1,0 +1,40 @@
+# Large datasets — do not push to GitHub
+syndrome_dataset/
+data/processed/
+
+# Keep reference images (small, needed for Angelman inference on Streamlit)
+!data/references/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.env
+*.venv
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TF / Keras cache
+*.h5.lock
+
+# Reports (generated at runtime)
+reports/*.png
+
+# Temp files
+*.tmp
+*.log
